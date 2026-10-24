@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: demo
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification
+    username: postgres
+    password: tony
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+server:
+  port: 8081
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: 900000
