@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Platform - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard-page">
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="12" fill="url(#gradient)"/>
+                    <path d="M20 10L25 18H15L20 10Z" fill="white"/>
+                    <rect x="17" y="19" width="6" height="8" rx="1" fill="white"/>
+                    <circle cx="20" cy="29" r="1" fill="white"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#a855f7"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>Notification Platform</span>
+            </div>
+            <div class="nav-actions">
+                <a href="change-password.html" class="btn btn-ghost btn-sm">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <rect x="3" y="8" width="12" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M5 8V6a4 4 0 118 0v2" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Change Password
+                </a>
+                <button onclick="logout()" class="btn btn-ghost btn-sm">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M12 12.5L15.5 9L12 5.5M6.5 9H15.5M9 2.5H4C3.44772 2.5 3 2.94772 3 3.5V14.5C3 15.0523 3.44772 15.5 4 15.5H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="dashboard-main">
+        <div class="dashboard-container">
+            <header class="dashboard-header fade-in">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Manage your notifications and API keys</p>
+                </div>
+            </header>
+            
+            <div class="dashboard-grid">
+                <section class="card fade-in" style="animation-delay: 0.1s">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>API Key Management</h2>
+                                <p>Generate and manage your API keys for sending notifications</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <button onclick="generateApiKey()" class="btn btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M10 4.167v11.666M4.167 10h11.666" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Generate / Rotate API Key
+                        </button>
+                        <p style="font-size: 0.8125rem; color: var(--text-tertiary);">Email verification required to generate API keys</p>
+                        
+                        <div id="apiKeyResult" class="api-key-display" style="display: none;">
+                            <div class="api-key-warning">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/>
+                                    <path d="M10 6.667v3.333M10 13.333h.008" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                                <span>Copy this key now. It cannot be retrieved later.</span>
+                            </div>
+                            <div class="api-key-box">
+                                <code id="apiKeyValue"></code>
+                                <button onclick="copyApiKey()" class="btn btn-ghost btn-sm" id="copyBtn">
+                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                        <rect x="6" y="6" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M3 12V3.75C3 3.33579 3.33579 3 3.75 3H12" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                    Copy
+                                </button>
+                            </div>
+                            <div class="api-key-meta">
+                                <span>Prefix: <strong id="apiKeyPrefix"></strong></span>
+                                <span>Created: <strong id="apiKeyCreated"></strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="card fade-in" style="animation-delay: 0.2s">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M4 4h16v12H5.17L4 17.17V4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>Send Notification</h2>
+                                <p>Create a new notification using your API key</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="notificationForm" class="notification-form">
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="notificationType">Type</label                                    <select id="notificationType" name="type" required>
+                                        <option value="">Select type</option>
+                                        <option value="EMAIL">Email</option>
+                                        <option value="SMS">SMS</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="recipient">Recipient</label>
+                                    <input type="text" id="recipient" name="recipient" placeholder="email@example.com or phone number" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="message">Message</label>
+                                <textarea id="message" name="message" rows="4" placeholder="Enter your message" required></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="payload">Payload (Optional)</label>
+                                <textarea id="payload" name="payload" rows="3" placeholder="Additional JSON or data"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="idempotencyKey">Idempotency Key</label>
+                                <input type="text" id="idempotencyKey" name="idempotencyKey" placeholder="Unique key to prevent duplicates" required>
+                                <button type="button" onclick="generateIdempotencyKey()" class class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
+                                    Generate Random Key
+                                </button>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M2.5 17.5L18.333 10L2.5 2.5V8.333L14.167 10L2.5 11.667V17.5Z" fill="currentColor"/>
+                                </svg>
+                                Send Notification
+                            </button>
+                        </form>
+                        
+                        <div id="notificationResult" class="notification-result" style="display: none;"></div>
+                        <p style="font-size: 0.8125rem; color: var(--text-tertiary);">API key required and email must be verified</p>
+                    </div>
+                </section>
+            </div>
+            
+            <section class="card fade-in" style="animation-delay: 0.3s; margin-top: 1.5rem">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <div class="card-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2>Your Notifications</h2>
+                            <p>View all notifications sent from your account</p>
+                        </div>
+                    </div>
+                    <button onclick="loadNotifications()" class="btn btn-ghost btn-sm">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M15 9a6 6 0 11-2.25-4.713M15 3v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="notificationsList" class="notifications-list">
+                        <p class="empty-state">Click refresh to load notifications</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -33,6 +33,9 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
+        if (requestUri.startsWith("/api/auth/")) {
+            return true;
+        }
         return !requestUri.equals("/api/notifications")
                 && !requestUri.startsWith("/api/notifications/")
                 && !requestUri.equals("/api/v1/notifications")

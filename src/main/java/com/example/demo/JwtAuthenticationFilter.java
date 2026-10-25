@@ -37,7 +37,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())
-                || request.getHeader("X-API-Key") != null) {
+                || request.getHeader("X-API-Key") != null
+                || request.getRequestURI().startsWith("/api/auth/")) {
             filterChain.doFilter(request, response);
             return;
         }

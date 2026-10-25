@@ -7,18 +7,20 @@ import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailOtpService emailOtpService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailOtpService emailOtpService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailOtpService = emailOtpService;
     }
 
     public List<User> getUsers() {
@@ -27,6 +29,11 @@ public class UserService {
 
     public User getUserById(Long id) {
         return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(normalizeEmail(email))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
@@ -40,7 +47,10 @@ public class UserService {
         }
 
         User user = new User(normalizedName, normalizedEmail, passwordEncoder.encode(rawPassword));
-        return userRepository.save(user);
+        user.setEmailVerified(false);
+        User saved = userRepository.save(user);
+        emailOtpService.sendEmailVerification(saved);
+        return saved;
     }
 
     public User login(String email, String rawPassword) {
@@ -53,6 +63,9 @@ public class UserService {
                 .orElseThrow(UserService::invalidCredentials);
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw invalidCredentials();
+        }
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email not verified. Please verify your email.");
         }
         return user;
     }
@@ -67,6 +80,23 @@ public class UserService {
         }
         validatePassword(newPassword);
         user.setPassword(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional
+    public void resetPasswordWithToken(String rawToken, String newPassword) {
+        validatePassword(newPassword);
+        User user = emailOtpService.verifyPasswordReset(rawToken);
+        user.setPassword(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional
+    public void resendVerification(String email) {
+        User user = userRepository.findByEmail(normalizeEmail(email))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already verified");
+        }
+        emailOtpService.sendEmailVerification(user);
     }
 
     private String normalizeEmail(String email) {
