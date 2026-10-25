@@ -2,13 +2,24 @@ spring:
   application:
     name: demo
   datasource:
-    url: jdbc:postgresql://localhost:5432/notification
-    username: postgres
-    password: tony
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/notification}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 server:
   port: 8081
 app:
@@ -16,3 +27,13 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: 900000
     cookie-secure: ${APP_AUTH_COOKIE_SECURE:false}
+  notifications:
+    poll-interval-ms: 5000
+    batch-size: 100
+    max-retries: 5
+    retry-delay-seconds: 10
+  idempotency:
+    cleanup-interval-ms: 60000
+  mail:
+    enabled: ${SMTP_ENABLED:false}
+    from: ${SMTP_FROM:}

@@ -38,7 +38,7 @@ public class ApiExceptionHandler {
             HttpServletRequest request) {
         return createErrorResponse(
                 HttpStatus.CONFLICT,
-                "A user with this email already exists",
+                "The request conflicts with an existing record",
                 request);
     }
 
