@@ -1,7 +1,6 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.User;
-import com.example.demo.services.EmailOtpService;
 import com.example.demo.services.JwtService;
 import com.example.demo.services.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,17 +25,14 @@ public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
-    private final EmailOtpService emailOtpService;
     private final boolean secureAuthCookie;
 
     public UserController(
             UserService userService,
             JwtService jwtService,
-            EmailOtpService emailOtpService,
             @Value("${app.jwt.cookie-secure:false}") boolean secureAuthCookie) {
         this.userService = userService;
         this.jwtService = jwtService;
-        this.emailOtpService = emailOtpService;
         this.secureAuthCookie = secureAuthCookie;
     }
 
@@ -73,8 +69,8 @@ public class UserController {
 
     @PostMapping("/api/auth/verify-email")
     @ResponseStatus(HttpStatus.OK)
-    public MessageResponse verifyEmail(@RequestBody VerifyTokenRequest request) {
-        emailOtpService.verifyEmail(request.token());
+    public MessageResponse verifyEmail(@RequestBody VerifyOtpRequest request) {
+        userService.verifyEmail(request.email(), request.otp());
         return new MessageResponse("Email verified successfully");
     }
 
@@ -88,18 +84,14 @@ public class UserController {
     @PostMapping("/api/auth/forgot-password")
     @ResponseStatus(HttpStatus.OK)
     public MessageResponse forgotPassword(@RequestBody EmailRequest request) {
-        try {
-            com.example.demo.models.User user = userService.getUserByEmail(request.email());
-            emailOtpService.sendPasswordReset(user);
-        } catch (Exception ignored) {
-        }
+        userService.sendPasswordResetOtp(request.email());
         return new MessageResponse("If an account exists with this email, a password reset code has been sent");
     }
 
     @PostMapping("/api/auth/reset-password")
     @ResponseStatus(HttpStatus.OK)
     public MessageResponse resetPassword(@RequestBody ResetPasswordRequest request) {
-        userService.resetPasswordWithToken(request.token(), request.newPassword());
+        userService.resetPasswordWithOtp(request.email(), request.otp(), request.newPassword());
         return new MessageResponse("Password reset successfully");
     }
 
@@ -128,13 +120,13 @@ public class UserController {
     public record PasswordChangeRequest(String currentPassword, String newPassword) {
     }
 
-    public record VerifyTokenRequest(String token) {
+    public record VerifyOtpRequest(String email, Long otp) {
     }
 
     public record EmailRequest(String email) {
     }
 
-    public record ResetPasswordRequest(String token, String newPassword) {
+    public record ResetPasswordRequest(String email, Long otp, String newPassword) {
     }
 
     public record LoginResponse(

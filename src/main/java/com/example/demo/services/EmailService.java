@@ -20,12 +20,16 @@ public class EmailService implements NotificationChannel {
 
     @Override
     public void send(Notification notification) {
+        sendEmail(notification.getRecipient(), "Notification", notification.getMessage());
+    }
+
+    public void sendEmail(String recipient, String subject, String message) {
         EmailProvider configuredProvider = provider.getIfAvailable();
         if (configuredProvider == null) {
             throw new ProviderNotConfiguredException("Email provider is not configured");
         }
         try {
-            configuredProvider.send(notification.getRecipient(), notification.getMessage());
+            configuredProvider.send(recipient, subject, message);
         } catch (ProviderNotConfiguredException exception) {
             throw exception;
         } catch (NotificationPermanentException exception) {

@@ -1,7 +1,12 @@
 package com.example.demo;
 
+import com.example.demo.services.NotificationDeliveryException;
+import com.example.demo.services.NotificationPermanentException;
+import com.example.demo.services.ProviderNotConfiguredException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatusException(
@@ -42,10 +49,34 @@ public class ApiExceptionHandler {
                 request);
     }
 
+    @ExceptionHandler(ProviderNotConfiguredException.class)
+    public ResponseEntity<ApiError> handleProviderNotConfigured(
+            ProviderNotConfiguredException exception,
+            HttpServletRequest request) {
+        log.error("Notification provider is not configured: {}", exception.getMessage());
+        return createErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Email delivery is not configured on this server. "
+                        + "Add your SMTP credentials to local-secrets.properties, then restart the backend.",
+                request);
+    }
+
+    @ExceptionHandler({NotificationDeliveryException.class, NotificationPermanentException.class})
+    public ResponseEntity<ApiError> handleNotificationDeliveryFailure(
+            RuntimeException exception,
+            HttpServletRequest request) {
+        log.error("Email delivery failed for {}", request.getRequestURI(), exception);
+        return createErrorResponse(
+                HttpStatus.BAD_GATEWAY,
+                "The email could not be delivered. Please try again later.",
+                request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpectedException(
             Exception exception,
             HttpServletRequest request) {
+        log.error("Unhandled exception while processing {}", request.getRequestURI(), exception);
         return createErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected server error occurred",

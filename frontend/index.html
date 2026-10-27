@@ -52,7 +52,7 @@
                     <a href="forgot-password.html" class="link">Forgot Password?</a>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" id="loginBtn" class="btn btn-primary btn-block">
                     <span>Sign In</span>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                         <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -72,33 +72,77 @@
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginBtn');
+        const loginError = document.getElementById('errorMessage');
+
+        // The dashboard redirects here when the session cookie is no longer valid.
+        const loginParams = new URLSearchParams(window.location.search);
+        if (loginParams.get('expired') === '1') {
+            if (loginParams.get('reason') === 'network') {
+                showAlert(
+                    loginError,
+                    'error',
+                    `Could not reach the API at ${API_BASE_URL}. Check that the backend is running and that this page's origin is allowed by CORS.`
+                );
+            } else {
+                showAlert(loginError, 'info', 'Your session has expired. Please sign in again.');
+                console.warn(
+                    `[auth] Session check failed. Page origin: ${window.location.origin}, API: ${API_BASE_URL}. ` +
+                    'Both must use the same hostname (localhost or 127.0.0.1) for the session cookie to be sent.'
+                );
+            }
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.style.display = 'none';
-            
+            hideAlert(loginError);
+
+            setFormBusy(loginForm, true);
+            setButtonLoading(loginButton, true, 'Signing in…');
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     credentials: 'include',
                     body: JSON.stringify({ email, password })
                 });
-                
+
                 if (response.ok) {
+                    const user = await readJson(response);
+                    if (user) {
+                        localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+                    }
+                    localStorage.setItem(STORAGE_KEYS.pendingEmail, email);
                     window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                const data = await readJson(response);
+                const message = data?.message || 'Login failed';
+
+                if (response.status === 403) {
+                    // Unverified account: point the user at the OTP verification page.
+                    showAlert(loginError, 'error', `${message} `);
+                    const verifyLink = document.createElement('a');
+                    verifyLink.className = 'link';
+                    verifyLink.href = `verify-email.html?email=${encodeURIComponent(email)}`;
+                    verifyLink.textContent = 'Verify your email →';
+                    loginError.append(verifyLink);
+                    localStorage.setItem(STORAGE_KEYS.pendingEmail, email);
                 } else {
-                    const data = await response.json();
-                    errorDiv.textContent = data.message || 'Login failed';
-                    errorDiv.style.display = 'flex';
+                    showAlert(loginError, 'error', message);
                 }
             } catch (error) {
-                errorDiv.textContent = 'Network error. Please try again.';
-                errorDiv.style.display = 'flex';
+                showAlert(loginError, 'error', 'Unable to reach the server. Please make sure the backend is running and try again.');
+            } finally {
+                setButtonLoading(loginButton, false);
+                setFormBusy(loginForm, false);
             }
         });
     </script>

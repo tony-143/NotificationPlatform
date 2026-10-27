@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="dashboard-page">
+    <div id="pageLoading" class="page-loading">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Checking your session…</p>
+    </div>
+
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
@@ -35,7 +40,7 @@
                     </svg>
                     Change Password
                 </a>
-                <button onclick="logout()" class="btn btn-ghost btn-sm">
+                <button type="button" onclick="logout(this)" class="btn btn-ghost btn-sm">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                         <path d="M12 12.5L15.5 9L12 5.5M6.5 9H15.5M9 2.5H4C3.44772 2.5 3 2.94772 3 3.5V14.5C3 15.0523 3.44772 15.5 4 15.5H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -71,13 +76,24 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <button onclick="generateApiKey()" class="btn btn-primary">
+                        <div class="form-group">
+                            <label for="apiKeyInput">Active API Key</label>
+                            <div class="input-with-button">
+                                <input type="text" id="apiKeyInput" placeholder="np_…" autocomplete="off" spellcheck="false">
+                                <button type="button" id="saveApiKeyBtn" class="btn btn-ghost btn-sm">Use Key</button>
+                            </div>
+                            <small class="form-hint">Stored only in this browser. Paste a key to use it after signing out.</small>
+                        </div>
+
+                        <button type="button" id="generateKeyBtn" onclick="generateApiKey(this)" class="btn btn-primary">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                 <path d="M10 4.167v11.666M4.167 10h11.666" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                             Generate / Rotate API Key
                         </button>
-                        <p style="font-size: 0.8125rem; color: var(--text-tertiary);">Email verification required to generate API keys</p>
+                        <p style="font-size: 0.8125rem; color: var(--text-tertiary);">Email verification required to generate API keys. Generating a new key replaces the previous one.</p>
+
+                        <div id="apiKeyAlert" class="alert" style="display: none;"></div>
                         
                         <div id="apiKeyResult" class="api-key-display" style="display: none;">
                             <div class="api-key-warning">
@@ -89,7 +105,7 @@
                             </div>
                             <div class="api-key-box">
                                 <code id="apiKeyValue"></code>
-                                <button onclick="copyApiKey()" class="btn btn-ghost btn-sm" id="copyBtn">
+                                <button type="button" onclick="copyApiKey()" class="btn btn-ghost btn-sm" id="copyBtn">
                                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                                         <rect x="6" y="6" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
                                         <path d="M3 12V3.75C3 3.33579 3.33579 3 3.75 3H12" stroke="currentColor" stroke-width="1.5"/>
@@ -124,7 +140,8 @@
                         <form id="notificationForm" class="notification-form">
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="notificationType">Type</label                                    <select id="notificationType" name="type" required>
+                                    <label for="notificationType">Type</label>
+                                    <select id="notificationType" name="type" required>
                                         <option value="">Select type</option>
                                         <option value="EMAIL">Email</option>
                                         <option value="SMS">SMS</option>
@@ -149,12 +166,12 @@
                             <div class="form-group">
                                 <label for="idempotencyKey">Idempotency Key</label>
                                 <input type="text" id="idempotencyKey" name="idempotencyKey" placeholder="Unique key to prevent duplicates" required>
-                                <button type="button" onclick="generateIdempotencyKey()" class class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
+                                <button type="button" onclick="generateIdempotencyKey()" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
                                     Generate Random Key
                                 </button>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" id="sendNotificationBtn" class="btn btn-primary">
                                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                     <path d="M2.5 17.5L18.333 10L2.5 2.5V8.333L14.167 10L2.5 11.667V17.5Z" fill="currentColor"/>
                                 </svg>
@@ -182,7 +199,7 @@
                             <p>View all notifications sent from your account</p>
                         </div>
                     </div>
-                    <button onclick="loadNotifications()" class="btn btn-ghost btn-sm">
+                    <button type="button" onclick="loadNotifications(this)" class="btn btn-ghost btn-sm">
                         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                             <path d="M15 9a6 6 0 11-2.25-4.713M15 3v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>

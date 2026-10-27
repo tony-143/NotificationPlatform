@@ -2,8 +2,12 @@ package com.example.demo.services;
 
 import com.example.demo.models.User;
 import com.example.demo.repositeries.UserRepository;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,14 +17,19 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class UserService {
 
+    private static final SecureRandom OTP_RANDOM = new SecureRandom();
+    private static final String EMAIL_VERIFICATION = "EMAIL_VERIFICATION";
+    private static final String PASSWORD_RESET = "PASSWORD_RESET";
+    private static final Duration OTP_LIFETIME = Duration.ofMinutes(10);
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailOtpService emailOtpService;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailOtpService emailOtpService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailOtpService = emailOtpService;
+        this.emailService = emailService;
     }
 
     public List<User> getUsers() {
@@ -37,19 +46,20 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    @Transactional
     public User register(String name, String email, String rawPassword) {
         String normalizedName = requireValue(name, "Name");
         String normalizedEmail = normalizeEmail(email);
         validatePassword(rawPassword);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered please verify is not verified!");
         }
 
         User user = new User(normalizedName, normalizedEmail, passwordEncoder.encode(rawPassword));
         user.setEmailVerified(false);
         User saved = userRepository.save(user);
-        emailOtpService.sendEmailVerification(saved);
+        sendOtp(saved, EMAIL_VERIFICATION, "Verify your email address");
         return saved;
     }
 
@@ -83,10 +93,13 @@ public class UserService {
     }
 
     @Transactional
-    public void resetPasswordWithToken(String rawToken, String newPassword) {
+    public void resetPasswordWithOtp(String email, Long otp, String newPassword) {
         validatePassword(newPassword);
-        User user = emailOtpService.verifyPasswordReset(rawToken);
+        User user = userRepository.findByEmail(normalizeEmail(email))
+                .orElseThrow(UserService::invalidOtp);
+        validateOtp(user, otp, PASSWORD_RESET);
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.clearOtp();
     }
 
     @Transactional
@@ -96,7 +109,52 @@ public class UserService {
         if (user.isEmailVerified()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already verified");
         }
-        emailOtpService.sendEmailVerification(user);
+        sendOtp(user, EMAIL_VERIFICATION, "Verify your email address");
+    }
+
+    @Transactional
+    public void verifyEmail(String email, Long otp) {
+        User user = userRepository.findByEmail(normalizeEmail(email))
+                .orElseThrow(UserService::invalidOtp);
+        validateOtp(user, otp, EMAIL_VERIFICATION);
+        user.setEmailVerified(true);
+        user.clearOtp();
+    }
+
+    @Transactional
+    public void sendPasswordResetOtp(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        userRepository.findByEmail(normalizedEmail)
+                .filter(User::isEmailVerified)
+                .ifPresent(user -> sendOtp(user, PASSWORD_RESET, "Reset your password"));
+    }
+
+    private void sendOtp(User user, String purpose, String subject) {
+        long otp = OTP_RANDOM.nextInt(900_000) + 100_000L;
+        user.setSixDigitOtp(otp);
+        user.setOtpPurpose(purpose);
+        user.setOtpExpiresAt(Instant.now().plus(OTP_LIFETIME));
+        userRepository.save(user);
+        emailService.sendEmail(
+                user.getEmail(),
+                subject,
+                "Your verification code is " + otp + ". It expires in 10 minutes.");
+    }
+
+    private void validateOtp(User user, Long suppliedOtp, String expectedPurpose) {
+        if (suppliedOtp == null
+                || suppliedOtp < 100_000
+                || suppliedOtp > 999_999
+                || !Objects.equals(user.getSixDigitOtp(), suppliedOtp)
+                || !expectedPurpose.equals(user.getOtpPurpose())
+                || user.getOtpExpiresAt() == null
+                || !user.getOtpExpiresAt().isAfter(Instant.now())) {
+            throw invalidOtp();
+        }
+    }
+
+    private static ResponseStatusException invalidOtp() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired verification code");
     }
 
     private String normalizeEmail(String email) {

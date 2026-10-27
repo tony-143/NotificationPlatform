@@ -36,7 +36,7 @@ public class SmtpEmailProvider implements EmailProvider {
     }
 
     @Override
-    public void send(String recipient, String message) {
+    public void send(String recipient, String subject, String message) {
         if (host.isBlank() || port < 1 || username.isBlank() || password.isBlank() || fromAddress.isBlank()) {
             throw new ProviderNotConfiguredException(
                     "SMTP provider requires host, port, username, password, and sender address");
@@ -46,7 +46,7 @@ public class SmtpEmailProvider implements EmailProvider {
         email.setFrom(fromAddress);
         email.setTo(recipient);
         email.setText(message);
-        email.setSubject("Notification");
+        email.setSubject(subject);
 
         try {
             mailSender.send(email);
@@ -55,5 +55,9 @@ public class SmtpEmailProvider implements EmailProvider {
         } catch (MailException exception) {
             throw new NotificationDeliveryException("SMTP provider failed to deliver email", exception);
         }
+    }
+
+    public void send(String recipient, String message) {
+        send(recipient, "Notification", message);
     }
 }

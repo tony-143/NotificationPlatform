@@ -66,7 +66,13 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:8080"));
+        // Any local port is allowed so a Live Server that falls back to 5501,
+        // 5502, ... keeps working. The response echoes the exact origin, which
+        // is required when credentials (cookies) are allowed.
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:[*]",
+                "http://127.0.0.1:[*]",
+                "http://[::1]:[*]"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "OPTIONS", "DELETE"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization",

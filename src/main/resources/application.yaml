@@ -1,6 +1,8 @@
 spring:
   application:
     name: demo
+  config:
+    import: "optional:file:./local-secrets.properties"
   datasource:
     url: jdbc:postgresql://localhost:5432/notification
     username: postgres

@@ -34,16 +34,22 @@
                     </svg>
                 </div>
                 <h1>Verify Email</h1>
-                <p>Enter the verification code sent to your email</p>
+                <p>Enter the 6-digit code sent to your email</p>
             </div>
             
             <form id="verifyForm" class="auth-form">
                 <div class="form-group">
-                    <label for="token">Verification Code</label>
-                    <input type="text" id="token" name="token" placeholder="Enter 12-character code" required>
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="otp">Verification Code</label>
+                    <input type="text" id="otp" name="otp" placeholder="6-digit code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code">
+                    <small class="form-hint">The code expires 10 minutes after it is sent.</small>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" id="verifyBtn" class="btn btn-primary btn-block">
                     <span>Verify Email</span>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                         <path d="M16.667 5L7.5 14.167 3.333 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -52,7 +58,11 @@
             </form>
             
             <div class="auth-footer">
-                <p><a href="index.html" class="link">← Back to Sign In</a></p>
+                <button type="button" id="resendBtn" class="btn btn-ghost btn-block btn-sm">
+                    Resend verification code
+                </button>
+                <p id="resendStatus" class="form-hint"></p>
+                <p style="margin-top: 0.75rem;"><a href="index.html" class="link">← Back to Sign In</a></p>
             </div>
             
             <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
@@ -61,39 +71,150 @@
     </div>
     
     <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script>
-        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+        const verifyForm = document.getElementById('verifyForm');
+        const verifyButton = document.getElementById('verifyBtn');
+        const resendButton = document.getElementById('resendBtn');
+        const resendStatus = document.getElementById('resendStatus');
+        const verifyError = document.getElementById('errorMessage');
+        const verifySuccess = document.getElementById('successMessage');
+        const emailInput = document.getElementById('email');
+        const otpInput = document.getElementById('otp');
+
+        let resendTimer = null;
+        let resendCooldown = 0;
+
+        // Pre-fill the email from the register page (or a previous visit).
+        const params = new URLSearchParams(window.location.search);
+        const prefilledEmail = params.get('email') || localStorage.getItem(STORAGE_KEYS.pendingEmail) || '';
+        if (prefilledEmail) {
+            emailInput.value = prefilledEmail;
+            otpInput.focus();
+        } else {
+            emailInput.focus();
+        }
+
+        function updateResendButton() {
+            if (resendButton.classList.contains('is-loading')) {
+                return;
+            }
+            if (resendCooldown > 0) {
+                resendButton.disabled = true;
+                resendButton.textContent = `Resend available in ${resendCooldown}s`;
+            } else {
+                resendButton.disabled = false;
+                resendButton.textContent = 'Resend verification code';
+            }
+        }
+
+        function startResendCooldown(seconds) {
+            resendCooldown = seconds;
+            updateResendButton();
+            clearInterval(resendTimer);
+            resendTimer = setInterval(() => {
+                resendCooldown -= 1;
+                if (resendCooldown <= 0) {
+                    resendCooldown = 0;
+                    clearInterval(resendTimer);
+                    resendTimer = null;
+                }
+                updateResendButton();
+            }, 1000);
+        }
+
+        resendButton.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            hideAlert(verifyError);
+            hideAlert(verifySuccess);
+
+            if (!email) {
+                showAlert(verifyError, 'error', 'Enter your email address first.');
+                emailInput.focus();
+                return;
+            }
+
+            resendStatus.textContent = '';
+            setButtonLoading(resendButton, true, 'Sending…');
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await readJson(response);
+                localStorage.setItem(STORAGE_KEYS.pendingEmail, email);
+
+                if (response.ok) {
+                    resendStatus.textContent = 'A new code was sent. Check your inbox.';
+                    startResendCooldown(30);
+                } else if (response.status === 404) {
+                    showAlert(verifyError, 'error', 'No account exists with that email address.');
+                } else if (response.status === 400) {
+                    showAlert(verifyError, 'error', 'This email is already verified. You can sign in instead.');
+                } else {
+                    showAlert(verifyError, 'error', data?.message || 'Could not resend the verification code.');
+                }
+            } catch (error) {
+                showAlert(verifyError, 'error', 'Unable to reach the server. Please try again.');
+            } finally {
+                setButtonLoading(resendButton, false);
+                updateResendButton();
+            }
+        });
+
+        verifyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const token = document.getElementById('token').value;
-            const errorDiv = document.getElementById('errorMessage');
-            const successDiv = document.getElementById('successMessage');
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-            
+            const email = emailInput.value.trim();
+            const otp = otpInput.value.trim();
+            hideAlert(verifyError);
+            hideAlert(verifySuccess);
+
+            if (!/^[0-9]{6}$/.test(otp)) {
+                showAlert(verifyError, 'error', 'Enter the 6-digit code from your email.');
+                otpInput.focus();
+                return;
+            }
+
+            setFormBusy(verifyForm, true);
+            setButtonLoading(verifyButton, true, 'Verifying…');
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ token })
+                    body: JSON.stringify({ email, otp: Number(otp) })
                 });
-                
+
                 if (response.ok) {
-                    successDiv.textContent = 'Email verified successfully! Redirecting to login...';
-                    successDiv.style.display = 'flex';
+                    localStorage.removeItem(STORAGE_KEYS.pendingEmail);
+                    showAlert(verifySuccess, 'success', 'Email verified successfully! Redirecting to sign in…');
                     setTimeout(() => {
                         window.location.href = 'index.html';
-                    }, 1500);
+                    }, 1400);
+                    return;
+                }
+
+                const data = await readJson(response);
+                if (response.status === 404) {
+                    showAlert(verifyError, 'error', 'No account exists with that email address.');
+                } else if (response.status === 400) {
+                    showAlert(verifyError, 'error', data?.message || 'Invalid or expired verification code.');
                 } else {
-                    const data = await response.json();
-                    errorDiv.textContent = data.message || 'Verification failed';
-                    errorDiv.style.display = 'flex';
+                    showAlert(verifyError, 'error', data?.message || 'Verification failed.');
                 }
             } catch (error) {
-                errorDiv.textContent = 'Network error. Please try again.';
-                errorDiv.style.display = 'flex';
+                showAlert(verifyError, 'error', 'Unable to reach the server. Please try again.');
+            } finally {
+                setButtonLoading(verifyButton, false);
+                setFormBusy(verifyForm, false);
             }
         });
     </script>

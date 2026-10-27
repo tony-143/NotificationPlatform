@@ -665,6 +665,133 @@ textarea {
     font-size: 0.875rem;
 }
 
+/* Loading states and async feedback */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.spinner-lg {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 3px;
+}
+
+.btn.is-loading {
+    cursor: progress;
+}
+
+.btn:disabled,
+.btn[disabled] {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.page-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: rgba(15, 16, 38, 0.82);
+    backdrop-filter: blur(6px);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+}
+
+.page-loading.is-hidden {
+    display: none;
+}
+
+.page-loading .spinner {
+    color: var(--primary);
+}
+
+.input-with-button {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.input-with-button input {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-with-button .btn {
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-line {
+    height: 0.75rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bg-hover) 25%, #363955 50%, var(--bg-hover) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-line-sm {
+    width: 30%;
+}
+
+.skeleton-line-lg {
+    width: 70%;
+    height: 0.625rem;
+}
+
+.skeleton-item {
+    pointer-events: none;
+}
+
+.alert a {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.auth-footer .btn-block + .form-hint {
+    margin-top: 0.5rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .auth-card {
