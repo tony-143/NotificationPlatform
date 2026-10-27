@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Keys · Notification Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body class="portal" data-page="api-keys">
+    <div id="pageLoading" class="page-loading">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Checking your session…</p>
+    </div>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <h1>API Keys</h1>
+                <p>
+                    One credential is kept per account. The full secret is displayed once, at creation or
+                    rotation, and is never stored in the browser.
+                </p>
+            </div>
+            <div class="spacer"></div>
+            <div class="page-head-actions">
+                <a class="btn btn-ghost" href="docs.html#authentication">Authentication guide</a>
+                <button class="btn btn-primary" type="button" id="headCreateBtn" hidden>Create API key</button>
+            </div>
+        </div>
+
+        <div id="keyAlert" class="portal-alert" role="status" hidden></div>
+
+        <section class="panel" aria-label="Current API key">
+            <div class="panel-head">
+                <h2>Credential</h2>
+                <span class="spacer"></span>
+                <span class="chart-hint">Stored as a SHA-256 hash</span>
+            </div>
+            <div id="keyCard" aria-busy="true">
+                <div class="key-card">
+                    <div class="key-identity">
+                        <div class="skeleton" style="width:38px;height:38px;border-radius:10px"></div>
+                        <div style="flex:1">
+                            <div class="skeleton" style="height:13px;width:35%"></div>
+                            <div class="skeleton" style="height:11px;width:22%;margin-top:8px"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Key security">
+            <div class="panel-head"><h2>How this key is protected</h2></div>
+            <div class="panel-body">
+                <ul class="check-list">
+                    <li>Secrets are generated with a cryptographically secure random number generator on the server.</li>
+                    <li>Only a SHA-256 hash and a non-secret prefix are stored. The raw key cannot be recovered from the database.</li>
+                    <li>The key is scoped to the signed-in account; it cannot read another tenant's notifications.</li>
+                    <li>Revoking a key immediately makes authenticated API calls fail with <code class="inline">401</code>.</li>
+                    <li>Use the key from a trusted backend only — never in public browser code or mobile apps.</li>
+                </ul>
+            </div>
+            <div class="panel-note">
+                This portal keeps the secret in memory only while the reveal dialog is open. Nothing is written to
+                local storage, session storage, cookies or logs.
+            </div>
+        </section>
+    </main>
+
+    <!-- Create key -->
+    <div class="overlay" id="createModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+            <div class="modal-head">
+                <h2 id="createTitle">Create API key</h2>
+                <button class="close" type="button" data-close aria-label="Close">×</button>
+            </div>
+            <form id="createForm">
+                <div class="modal-body">
+                    <div class="field">
+                        <label for="keyName">Key name</label>
+                        <input class="input" id="keyName" name="name" maxlength="64"
+                               placeholder="Production backend" autocomplete="off" required>
+                        <span class="hint">A label to recognise this credential later.</span>
+                    </div>
+                    <div class="portal-alert info">
+                        The full secret appears once. Copy it into your secret manager before closing the next dialog.
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+                    <button class="btn btn-primary" type="submit" id="createSubmit">Create key</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- One-time secret -->
+    <div class="overlay" id="secretModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="secretTitle">
+            <div class="modal-head">
+                <h2 id="secretTitle">API key created</h2>
+                <button class="close" type="button" data-close aria-label="Close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="portal-alert success">
+                    Copy this key now. It will not be shown again and cannot be retrieved later.
+                </div>
+                <div class="secret-box">
+                    <code id="secretValue"></code>
+                    <button class="btn btn-secondary btn-sm" type="button" id="copySecret">Copy</button>
+                </div>
+                <p class="muted-note" id="secretMeta"></p>
+                <p class="muted-note">
+                    Store it in your backend environment variables or a secret manager. Do not paste it into
+                    client-side JavaScript.
+                </p>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-primary" type="button" data-close id="secretDone">I saved the key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation -->
+    <div class="overlay" id="confirmModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <div class="modal-head">
+                <h2 id="confirmTitle">Confirm</h2>
+                <button class="close" type="button" data-close aria-label="Close">×</button>
+            </div>
+            <div class="modal-body" id="confirmBody"></div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+                <button class="btn btn-danger" type="button" id="confirmAction">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/api-keys.js"></script>
+</body>
+</html>

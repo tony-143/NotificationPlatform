@@ -41,6 +41,16 @@ public class UserController {
         return userService.getUsers();
     }
 
+    /**
+     * Safe profile of the signed-in account. Used by the portal shell and the
+     * Settings page so the frontend never needs to list every user.
+     */
+    @GetMapping("/api/users/me")
+    public ProfileResponse getCurrentUser(Authentication authentication) {
+        User user = userService.getUserByEmail(authentication.getName());
+        return new ProfileResponse(user.getId(), user.getName(), user.getEmail(), user.isEmailVerified());
+    }
+
     @GetMapping("/api/users/{id}")
     public User getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
@@ -112,6 +122,9 @@ public class UserController {
     }
 
     public record RegistrationRequest(String name, String email, String password) {
+    }
+
+    public record ProfileResponse(Long id, String name, String email, boolean emailVerified) {
     }
 
     public record LoginRequest(String email, String password) {

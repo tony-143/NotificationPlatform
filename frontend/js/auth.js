@@ -86,13 +86,14 @@ async function readJson(response) {
     }
 }
 
-// The backend has no /api/auth/me; /api/users is the protected endpoint we can
-// safely probe to find out whether the session cookie is still valid.
-// Returns 'ok', 'unauthorized' (server reachable, cookie missing/expired) or
-// 'unreachable' (CORS/network failure) so pages can explain what went wrong.
+// The backend exposes a safe profile endpoint for the signed-in account. It is
+// the protected endpoint we probe to find out whether the session cookie is
+// still valid. Returns 'ok', 'unauthorized' (server reachable, cookie
+// missing/expired) or 'unreachable' (CORS/network failure) so pages can explain
+// what went wrong.
 async function checkAuth() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/users`, {
+        const response = await fetch(`${API_BASE_URL}/api/users/me`, {
             credentials: 'include',
             cache: 'no-store'
         });
@@ -100,7 +101,7 @@ async function checkAuth() {
             return 'ok';
         }
         console.warn(
-            `[auth] ${API_BASE_URL}/api/users returned ${response.status}. ` +
+            `[auth] ${API_BASE_URL}/api/users/me returned ${response.status}. ` +
             `Page origin: ${window.location.origin}. If you just signed in, the ` +
             'ACCESS_TOKEN cookie was not stored or not sent.'
         );

@@ -76,10 +76,11 @@
         const loginButton = document.getElementById('loginBtn');
         const loginError = document.getElementById('errorMessage');
 
-        // The dashboard redirects here when the session cookie is no longer valid.
+        // Portal pages redirect here when the session cookie is no longer valid.
         const loginParams = new URLSearchParams(window.location.search);
-        if (loginParams.get('expired') === '1') {
-            if (loginParams.get('reason') === 'network') {
+        const redirectReason = loginParams.get('reason');
+        if (loginParams.get('expired') === '1' || redirectReason) {
+            if (redirectReason === 'network') {
                 showAlert(
                     loginError,
                     'error',

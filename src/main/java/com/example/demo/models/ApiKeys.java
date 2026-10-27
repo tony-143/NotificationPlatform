@@ -35,10 +35,15 @@ public class ApiKeys {
     @Column(nullable = false, length = 16)
     private String keyStatus;
 
+    @Column(length = 64)
+    private String name;
+
     @Column(nullable = false)
     private Instant createdAt;
 
     private Instant expiresAt;
+
+    private Instant lastUsedAt;
 
     public ApiKeys() {
     }
@@ -93,5 +98,21 @@ public class ApiKeys {
 
     public void setExpiresAt(Instant expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Instant getLastUsedAt() {
+        return lastUsedAt;
+    }
+
+    public void setLastUsedAt(Instant lastUsedAt) {
+        this.lastUsedAt = lastUsedAt;
     }
 }

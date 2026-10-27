@@ -24,6 +24,8 @@ public interface ApiKeyRepository extends JpaRepository<ApiKeys, Long> {
 
     Optional<ApiKeys> findByUser_Id(Long userId);
 
+    Optional<ApiKeys> findByIdAndUser_Id(Long id, Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select apiKey from ApiKeys apiKey where apiKey.id = :id")
     Optional<ApiKeys> findByIdForUpdate(@Param("id") Long id);

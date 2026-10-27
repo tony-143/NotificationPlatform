@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings · Notification Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body class="portal" data-page="settings">
+    <div id="pageLoading" class="page-loading">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Checking your session…</p>
+    </div>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <h1>Settings</h1>
+                <p>Your profile and account security. Notification data is scoped to this account.</p>
+            </div>
+        </div>
+
+        <div id="settingsAlert" class="portal-alert error" role="alert" hidden></div>
+
+        <section class="panel" aria-label="Profile">
+            <div class="panel-head"><h2>Profile</h2></div>
+            <div class="panel-body" id="profileBody" aria-busy="true">
+                <div class="profile-row">
+                    <div class="skeleton" style="width:46px;height:46px;border-radius:50%"></div>
+                    <div style="flex:1">
+                        <div class="skeleton" style="height:14px;width:30%"></div>
+                        <div class="skeleton" style="height:11px;width:45%;margin-top:8px"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Password">
+            <div class="panel-head"><h2>Password</h2></div>
+            <div class="panel-body settings-row">
+                <div>
+                    <div class="settings-label">Account password</div>
+                    <p class="muted-note" style="margin:2px 0 0">
+                        Change your password from a dedicated form. You will be asked for the current password.
+                    </p>
+                </div>
+                <a class="btn btn-secondary" href="change-password.html">Change password</a>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Session">
+            <div class="panel-head"><h2>Session</h2></div>
+            <div class="panel-body settings-row">
+                <div>
+                    <div class="settings-label">Signed in on this browser</div>
+                    <p class="muted-note" style="margin:2px 0 0">
+                        Signing out clears the HTTP-only session cookie. API keys are not affected.
+                    </p>
+                </div>
+                <button class="btn btn-danger" type="button" id="signOutBtn">Sign out</button>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Workspace details">
+            <div class="panel-head"><h2>Workspace details</h2></div>
+            <div class="panel-body">
+                <dl class="kv">
+                    <dt>Account ID</dt>
+                    <dd id="accountId">—</dd>
+                    <dt>API base URL</dt>
+                    <dd><code class="inline" id="apiBase">—</code></dd>
+                    <dt>Email verification</dt>
+                    <dd id="verifiedState">—</dd>
+                </dl>
+                <p class="muted-note" style="margin-top:14px">
+                    Email verification is required before creating or rotating API keys. Verification is handled
+                    during registration and can be resent from the sign-in flow.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+</html>

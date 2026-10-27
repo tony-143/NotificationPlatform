@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation · Notification Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/portal.css">
+</head>
+<body class="portal" data-page="docs">
+    <div id="pageLoading" class="page-loading">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Checking your session…</p>
+    </div>
+
+    <main class="app-main">
+        <div class="page-head">
+            <div>
+                <h1>Documentation</h1>
+                <p>
+                    Integrate the notification API from your backend. Every example below matches the
+                    controllers and DTOs in this repository.
+                </p>
+            </div>
+            <div class="spacer"></div>
+            <div class="page-head-actions">
+                <a class="btn btn-ghost" href="api-keys.html">Manage API keys</a>
+                <a class="btn btn-primary" href="#create-a-notification">Try it</a>
+            </div>
+        </div>
+
+        <div class="docs-layout">
+            <nav class="docs-toc" aria-label="On this page">
+                <h2>On this page</h2>
+                <a href="#getting-started">Getting started</a>
+                <a href="#authentication">Authentication</a>
+                <a href="#create-a-notification">Create a notification</a>
+                <a href="#idempotency">Idempotency</a>
+                <a href="#scheduling">Scheduling</a>
+                <a href="#check-status">Check status</a>
+                <a href="#list-history">List history</a>
+                <a href="#errors">Error handling</a>
+                <a href="#rate-limits">Rate limits &amp; quotas</a>
+                <a href="#channels">Email &amp; SMS</a>
+                <a href="#key-security">API key security</a>
+                <a href="#portal-endpoints">Portal endpoints</a>
+                <a href="#troubleshooting">Troubleshooting</a>
+            </nav>
+
+            <div class="docs-content">
+                <section id="getting-started">
+                    <h2>Getting started</h2>
+                    <p>
+                        The API is a JSON/HTTPS service. Requests are authenticated with an API key created in
+                        <a href="api-keys.html">API Keys</a>. Each account has exactly one active key at a time.
+                    </p>
+                    <dl class="kv" style="margin-bottom:16px">
+                        <dt>Base URL</dt>
+                        <dd><code class="inline js-api-base">http://localhost:8081</code></dd>
+                        <dt>Content type</dt>
+                        <dd><code class="inline">application/json</code></dd>
+                        <dt>Auth header</dt>
+                        <dd><code class="inline">X-API-Key</code></dd>
+                        <dt>Idempotency header</dt>
+                        <dd><code class="inline">Idempotency-Key</code> (required on create)</dd>
+                    </dl>
+                    <p>
+                        Three public operations are available: create a notification, read one notification, and
+                        list your notification history. They are also served under the
+                        <code class="inline">/api/v1/notifications</code> alias.
+                    </p>
+                    <div class="portal-alert info">
+                        Notifications are processed asynchronously. A <code class="inline">202 Accepted</code>
+                        response means the notification was stored — not that it was delivered.
+                    </div>
+                </section>
+
+                <section id="authentication">
+                    <h2>Authentication</h2>
+                    <p>
+                        Send the secret from your API key in the <code class="inline">X-API-Key</code> header.
+                        This backend does <strong>not</strong> use <code class="inline">Authorization: Bearer</code>
+                        for notification calls — a Bearer token is silently ignored and the request fails with
+                        <code class="inline">401</code>.
+                    </p>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>HTTP headers</span><button class="copy" type="button">Copy</button></div>
+                        <pre>Content-Type: application/json
+X-API-Key: np_YOUR_API_KEY
+Idempotency-Key: order-1042-email</pre>
+                    </div>
+                    <p>
+                        Keys are bound to the account that created them. Requests cannot select another tenant:
+                        the server derives ownership from the key itself.
+                    </p>
+                    <div class="portal-alert error">
+                        Use API keys only from a trusted server. Never embed them in browser JavaScript, mobile
+                        apps, public repositories or client-side logs.
+                    </div>
+                    <p>
+                        A missing, malformed, expired or revoked key returns
+                        <code class="inline">401 Unauthorized</code> with the body
+                        <code class="inline">{"message":"A valid API key is required"}</code> or
+                        <code class="inline">{"message":"Invalid or revoked API key"}</code>.
+                    </p>
+                </section>
+
+                <section id="create-a-notification">
+                    <h2>Create a notification</h2>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="route">/api/notifications</span>
+                        <span class="route-params">alias: /api/v1/notifications</span>
+                    </div>
+                    <p>
+                        Stores a notification for asynchronous processing. Returns
+                        <code class="inline">202 Accepted</code> for a new request, or
+                        <code class="inline">200 OK</code> with <code class="inline">duplicate: true</code> when the
+                        same <code class="inline">Idempotency-Key</code> and payload were replayed.
+                    </p>
+
+                    <h3>Request headers</h3>
+                    <table class="params">
+                        <thead><tr><th>Header</th><th>Required</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>Content-Type</code></td><td>Yes</td><td><code>application/json</code></td></tr>
+                            <tr><td><code>X-API-Key</code></td><td>Yes</td><td>Active key for your account</td></tr>
+                            <tr><td><code>Idempotency-Key</code></td><td>Yes</td><td>1–200 characters; unique per logical request for 5 minutes</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Request body</h3>
+                    <table class="params">
+                        <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>type</code></td><td>string</td><td><code>EMAIL</code> or <code>SMS</code> (case-insensitive)</td></tr>
+                            <tr><td><code>recipient</code></td><td>string</td><td>Email address or phone number, max 512 chars</td></tr>
+                            <tr><td><code>message</code></td><td>string</td><td>Required, max 10,000 chars</td></tr>
+                            <tr><td><code>payload</code></td><td>string</td><td>Optional JSON-encoded string, max 100,000 chars</td></tr>
+                            <tr><td><code>scheduledAt</code></td><td>ISO-8601 instant</td><td>Optional; must not be in the past</td></tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        <code class="inline">payload</code> is a string, not a nested object. Serialize your JSON
+                        first: <code class="inline">"payload": "{\"orderId\":1042}"</code>.
+                    </p>
+
+                    <h3>Response</h3>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>202 Accepted</span><button class="copy" type="button">Copy</button></div>
+                        <pre>{
+  "notification": {
+    "id": 42,
+    "tenantId": 7,
+    "type": "EMAIL",
+    "recipient": "customer@example.com",
+    "message": "Your order #1042 has shipped.",
+    "payload": "{\"orderId\":1042}",
+    "status": "PENDING",
+    "statusMessage": null,
+    "retryCount": 0,
+    "nextAttemptAt": null,
+    "closedAt": null,
+    "scheduledAt": null,
+    "createdAt": "2026-10-27T16:44:55.252706Z",
+    "updatedAt": "2026-10-27T16:44:55.252706Z"
+  },
+  "duplicate": false
+}</pre>
+                    </div>
+
+                    <h3>cURL</h3>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>cURL</span><button class="copy" type="button">Copy</button></div>
+                        <pre>curl -X POST "<span class="js-api-base">http://localhost:8081</span>/api/notifications" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: np_YOUR_API_KEY" \
+  -H "Idempotency-Key: order-1042-email" \
+  -d '{
+    "type": "EMAIL",
+    "recipient": "customer@example.com",
+    "message": "Your order #1042 has shipped.",
+    "payload": "{\"orderId\":1042}"
+  }'</pre>
+                    </div>
+
+                    <h3>JavaScript (server-side)</h3>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>Node.js 18+</span><button class="copy" type="button">Copy</button></div>
+                        <pre>const response = await fetch(`${process.env.NOTIFICATION_API_URL}/api/notifications`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': process.env.NOTIFICATION_API_KEY,
+    'Idempotency-Key': crypto.randomUUID()
+  },
+  body: JSON.stringify({
+    type: 'EMAIL',
+    recipient: 'customer@example.com',
+    message: 'Your order #1042 has shipped.',
+    payload: JSON.stringify({ orderId: 1042 })
+  })
+});
+
+const result = await response.json();
+if (!response.ok) {
+  throw new Error(result.message || `Request failed: ${response.status}`);
+}
+console.log(result.notification.id, result.duplicate);</pre>
+                    </div>
+
+                    <h3>Python</h3>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>Python 3</span><button class="copy" type="button">Copy</button></div>
+                        <pre>import os
+import json
+import requests
+
+response = requests.post(
+    os.environ["NOTIFICATION_API_URL"] + "/api/notifications",
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": os.environ["NOTIFICATION_API_KEY"],
+        "Idempotency-Key": "order-1042-email",
+    },
+    json={
+        "type": "EMAIL",
+        "recipient": "customer@example.com",
+        "message": "Your order #1042 has shipped.",
+        "payload": json.dumps({"orderId": 1042}),
+    },
+    timeout=10,
+)
+response.raise_for_status()
+print(response.json()["notification"]["id"])</pre>
+                    </div>
+
+                    <h3>Try it</h3>
+                    <div class="portal-alert info">
+                        This sends a <strong>real</strong> notification request to the API. Paste an API key —
+                        it is held in this page's memory only and is cleared when you leave the page. It is never
+                        written to storage or logs.
+                    </div>
+
+                    <form id="tryForm" class="tryout" autocomplete="off">
+                        <div class="field" style="grid-column:1/-1">
+                            <label for="tryKey">API key</label>
+                            <div class="secret-box" style="padding:4px 6px 4px 10px">
+                                <input class="input" id="tryKey" type="password" placeholder="np_..."
+                                       autocomplete="off" spellcheck="false" data-lpignore="true"
+                                       style="border:0;background:transparent;padding:6px 4px">
+                                <button class="btn btn-ghost btn-sm" type="button" id="toggleKey">Show</button>
+                            </div>
+                            <span class="hint">Get a key from <a href="api-keys.html">API Keys</a>. Do not use a production key for testing.</span>
+                        </div>
+
+                        <div class="field">
+                            <label for="tryType">Type</label>
+                            <select class="select" id="tryType">
+                                <option value="EMAIL">EMAIL</option>
+                                <option value="SMS">SMS</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="tryRecipient">Recipient</label>
+                            <input class="input" id="tryRecipient" required placeholder="you@example.com">
+                        </div>
+
+                        <div class="field" style="grid-column:1/-1">
+                            <label for="tryMessage">Message</label>
+                            <textarea class="textarea" id="tryMessage" required maxlength="10000"
+                                      placeholder="Hello from the Notification Platform"></textarea>
+                        </div>
+
+                        <div class="field" style="grid-column:1/-1">
+                            <label for="tryPayload">Payload (optional, JSON string)</label>
+                            <textarea class="textarea" id="tryPayload" maxlength="100000" rows="3"
+                                      placeholder='{"orderId":1042}'></textarea>
+                        </div>
+
+                        <div class="field">
+                            <label for="tryScheduled">Schedule for (optional)</label>
+                            <input class="input" id="tryScheduled" type="datetime-local">
+                        </div>
+
+                        <div class="field">
+                            <label for="tryIdem">Idempotency-Key</label>
+                            <div style="display:flex;gap:6px">
+                                <input class="input" id="tryIdem" required maxlength="200">
+                                <button class="btn btn-ghost btn-sm" type="button" id="regenIdem">New</button>
+                            </div>
+                            <span class="hint">Reuse the same value when retrying the same request.</span>
+                        </div>
+
+                        <div class="form-actions" style="grid-column:1/-1">
+                            <button class="btn btn-primary" type="submit" id="trySubmit">Send request</button>
+                            <button class="btn btn-ghost" type="button" id="tryReset">Clear</button>
+                        </div>
+                    </form>
+
+                    <div id="tryResult" class="try-result" hidden>
+                        <div class="try-result-head">
+                            <span id="tryStatus"></span>
+                            <span class="chart-hint" id="tryMeta"></span>
+                        </div>
+                        <pre id="tryBody" class="payload-box"></pre>
+                    </div>
+                </section>
+
+                <section id="idempotency">
+                    <h2>Idempotency</h2>
+                    <p>
+                        Every create request must include <code class="inline">Idempotency-Key</code>. The server
+                        hashes the key and the validated request body, and remembers the pair for
+                        <strong>5 minutes</strong>.
+                    </p>
+                    <ul>
+                        <li>New key → <code class="inline">202 Accepted</code>, notification stored, <code class="inline">duplicate: false</code>.</li>
+                        <li>Same key + same body within 5 minutes → <code class="inline">200 OK</code>, the original notification is returned, <code class="inline">duplicate: true</code>. No second notification is created.</li>
+                        <li>Same key + a different body → <code class="inline">409 Conflict</code> with <code class="inline">"Idempotency-Key was already used with a different request"</code>.</li>
+                        <li>After 5 minutes the record expires, so the same key can be used again.</li>
+                    </ul>
+                    <p>
+                        Reuse the same value when retrying the same logical notification (for example after a
+                        timeout). Generate a new value for every different notification. A UUID or a deterministic
+                        business key such as <code class="inline">order-1042-email</code> both work.
+                    </p>
+                </section>
+
+                <section id="scheduling">
+                    <h2>Scheduling</h2>
+                    <p>
+                        Set <code class="inline">scheduledAt</code> to an ISO-8601 instant to delay processing.
+                        The scheduler only picks up notifications whose scheduled time has passed.
+                    </p>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>cURL</span><button class="copy" type="button">Copy</button></div>
+                        <pre>curl -X POST "<span class="js-api-base">http://localhost:8081</span>/api/notifications" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: np_YOUR_API_KEY" \
+  -H "Idempotency-Key: reminder-2026-11-01" \
+  -d '{
+    "type": "EMAIL",
+    "recipient": "customer@example.com",
+    "message": "Your subscription renews tomorrow.",
+    "scheduledAt": "2026-11-01T09:00:00Z"
+  }'</pre>
+                    </div>
+                    <p>
+                        A time in the past returns <code class="inline">400 Bad Request</code> (a 60-second grace
+                        period is allowed). Scheduled notifications stay <code class="inline">PENDING</code> until
+                        they are due. Align this with server time (UTC in the examples).
+                    </p>
+                </section>
+
+                <section id="check-status">
+                    <h2>Check notification status</h2>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="route">/api/notifications/{notificationId}</span>
+                    </div>
+                    <p>Returns one notification owned by the key's account, including the current status.</p>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>cURL</span><button class="copy" type="button">Copy</button></div>
+                        <pre>curl "<span class="js-api-base">http://localhost:8081</span>/api/notifications/42" \
+  -H "X-API-Key: np_YOUR_API_KEY"</pre>
+                    </div>
+                    <p>
+                        A notification that belongs to another account returns
+                        <code class="inline">404 Not Found</code>, not <code class="inline">403</code>, so ids cannot
+                        be enumerated across tenants.
+                    </p>
+
+                    <h3>Status values</h3>
+                    <table class="params">
+                        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>PENDING</code></td><td>Queued or waiting for its scheduled time.</td></tr>
+                            <tr><td><code>PROCESSING</code></td><td>A worker has claimed it and is attempting delivery.</td></tr>
+                            <tr><td><code>RETRYING</code></td><td>A transient failure occurred; another attempt is queued.</td></tr>
+                            <tr><td><code>SENT</code></td><td>The provider accepted the message. <strong>Not a delivery receipt.</strong></td></tr>
+                            <tr><td><code>FAILED</code></td><td>Delivery failed permanently or retries were exhausted.</td></tr>
+                            <tr><td><code>CLOSED</code></td><td>The notification was closed without a send.</td></tr>
+                            <tr><td><code>PROVIDER_NOT_CONFIGURED</code></td><td>No email provider is configured on the server; nothing was sent.</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="portal-alert info">
+                        There is no <code class="inline">DELIVERED</code> status. This backend does not ingest
+                        delivery receipts from providers, so the portal never claims confirmed delivery.
+                    </div>
+                </section>
+
+                <section id="list-history">
+                    <h2>List notification history</h2>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="route">/api/notifications</span>
+                    </div>
+                    <p>
+                        Returns all notifications for the key's account, newest first. The public API returns a
+                        plain array and is not paginated.
+                    </p>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>JavaScript</span><button class="copy" type="button">Copy</button></div>
+                        <pre>const response = await fetch(`${process.env.NOTIFICATION_API_URL}/api/notifications`, {
+  headers: { 'X-API-Key': process.env.NOTIFICATION_API_KEY }
+});
+
+if (!response.ok) {
+  throw new Error(`History request failed: ${response.status}`);
+}
+
+const notifications = await response.json();
+for (const item of notifications) {
+  console.log(item.id, item.type, item.status, item.createdAt);
+}</pre>
+                    </div>
+                    <p>
+                        For paginated, filterable history use the dashboard endpoints below. They are
+                        session-authenticated and scoped from the signed-in account, so they are not usable with
+                        <code class="inline">X-API-Key</code>.
+                    </p>
+                </section>
+
+                <section id="errors">
+                    <h2>Error handling</h2>
+                    <p>Errors use a consistent JSON body:</p>
+                    <div class="code-block">
+                        <div class="code-block-head"><span>Error shape</span><button class="copy" type="button">Copy</button></div>
+                        <pre>{
+  "timestamp": "2026-10-27T16:45:03.305948700Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Notification type must be EMAIL or SMS",
+  "path": "/api/notifications"
+}</pre>
+                    </div>
+                    <table class="params">
+                        <thead><tr><th>Status</th><th>When it happens</th><th>Retry?</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>200</code></td><td>Idempotent replay of the same request.</td><td>No — the original was stored.</td></tr>
+                            <tr><td><code>202</code></td><td>New notification accepted.</td><td>No.</td></tr>
+                            <tr><td><code>400</code></td><td>Missing/invalid field, bad <code>Idempotency-Key</code>, past <code>scheduledAt</code>.</td><td>No — fix the request.</td></tr>
+                            <tr><td><code>401</code></td><td>Missing, malformed, expired or revoked key.</td><td>No — fix credentials.</td></tr>
+                            <tr><td><code>404</code></td><td>Notification id not found for this tenant.</td><td>No.</td></tr>
+                            <tr><td><code>409</code></td><td><code>Idempotency-Key</code> reused with a different payload.</td><td>Use a new key.</td></tr>
+                            <tr><td><code>500</code></td><td>Unexpected server error.</td><td>Yes — retry with the same <code>Idempotency-Key</code>.</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="rate-limits">
+                    <h2>Rate limits &amp; quotas</h2>
+                    <p>
+                        This backend does not implement request rate limiting, quotas or per-key throttles, and it
+                        does not track API request counts. No <code class="inline">429</code> responses are produced
+                        and no <code class="inline">X-RateLimit-*</code> headers are returned.
+                    </p>
+                    <p>
+                        Because usage analytics are unavailable, the Dashboard reports notification outcomes only.
+                        If you need request-level metrics, they must be added at the gateway or in a dedicated
+                        audit table — the portal intentionally does not fabricate them.
+                    </p>
+                </section>
+
+                <section id="channels">
+                    <h2>Email &amp; SMS support</h2>
+                    <p>
+                        <code class="inline">EMAIL</code> is delivered through the configured SMTP server. If SMTP
+                        credentials are absent, the notification is stored and then marked
+                        <code class="inline">PROVIDER_NOT_CONFIGURED</code>; the create call still returns
+                        <code class="inline">202</code>.
+                    </p>
+                    <p>
+                        <code class="inline">SMS</code> is accepted and stored but no SMS gateway is integrated in
+                        this repository. SMS notifications therefore end in
+                        <code class="inline">PROVIDER_NOT_CONFIGURED</code> as well. Treat the SMS channel as a
+                        schema-level placeholder until a gateway is added.
+                    </p>
+                    <p>
+                        Recipients are validated for length only. The backend does not verify that an email address
+                        or phone number exists.
+                    </p>
+                </section>
+
+                <section id="key-security">
+                    <h2>API key security</h2>
+                    <ul>
+                        <li>The server generates 32 random bytes from <code class="inline">SecureRandom</code>, URL-safe Base64 encodes them and prefixes <code class="inline">np_</code>.</li>
+                        <li>Only a SHA-256 hash and an 11-character prefix are stored. The raw secret is shown once and cannot be recovered.</li>
+                        <li>Rotating a key replaces the hash in place — the previous secret stops working immediately.</li>
+                        <li>Revoking a key sets its status to <code class="inline">REVOKED</code>; the row is retained for audit, and authentication then returns <code class="inline">401</code>.</li>
+                        <li>Ownership is always resolved from the authenticated principal, never from a tenant id supplied by the caller.</li>
+                    </ul>
+                    <p>
+                        Recommended: keep the key in environment variables or a secrets manager, use a separate
+                        account/key per environment where possible, and rotate immediately if a key is exposed.
+                    </p>
+                </section>
+
+                <section id="portal-endpoints">
+                    <h2>Portal endpoints</h2>
+                    <p>
+                        These endpoints back the portal itself. They use the session cookie plus the CSRF header
+                        issued by <code class="inline">GET /api/auth/csrf</code>, not
+                        <code class="inline">X-API-Key</code>.
+                    </p>
+                    <table class="params">
+                        <thead><tr><th>Method</th><th>Route</th><th>Purpose</th></tr></thead>
+                        <tbody>
+                            <tr><td>GET</td><td><code>/api/keys</code></td><td>Current key metadata, or <code>204</code> when none exists. Never returns the secret.</td></tr>
+                            <tr><td>POST</td><td><code>/api/keys</code></td><td>Create a key; returns the secret once.</td></tr>
+                            <tr><td>POST</td><td><code>/api/keys/{id}/rotate</code></td><td>Replace the secret; returns the new secret once.</td></tr>
+                            <tr><td>POST</td><td><code>/api/keys/{id}/revoke</code></td><td>Mark the key revoked.</td></tr>
+                            <tr><td>GET</td><td><code>/api/dashboard/summary?range=24h|7d|30d</code></td><td>Status, channel and success-rate counts.</td></tr>
+                            <tr><td>GET</td><td><code>/api/dashboard/timeseries?range=…</code></td><td>Hourly (24h) or daily (7d/30d) volume with failures.</td></tr>
+                            <tr><td>GET</td><td><code>/api/dashboard/notifications</code></td><td>Paginated history: <code>page</code>, <code>size</code>, <code>status</code>, <code>channel</code>, <code>from</code>, <code>to</code>, <code>q</code>.</td></tr>
+                            <tr><td>GET</td><td><code>/api/dashboard/notifications/{id}</code></td><td>Detail with masked recipient and derived timeline.</td></tr>
+                            <tr><td>PUT</td><td><code>/api/users/me/password</code></td><td>Change the signed-in account password.</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="troubleshooting">
+                    <h2>Troubleshooting</h2>
+                    <h3>401 on every request</h3>
+                    <ul>
+                        <li>Header name must be <code class="inline">X-API-Key</code>, not <code class="inline">Authorization</code>.</li>
+                        <li>The key may have been rotated or revoked — fetch the current prefix on the API Keys page.</li>
+                        <li>Copy the whole secret including the <code class="inline">np_</code> prefix; whitespace breaks the hash.</li>
+                    </ul>
+                    <h3>409 Idempotency conflict</h3>
+                    <p>
+                        The same <code class="inline">Idempotency-Key</code> was used with a different body within
+                        5 minutes. Use a fresh key for a genuinely different notification.
+                    </p>
+                    <h3>Notification stays PENDING</h3>
+                    <p>
+                        Check <code class="inline">scheduledAt</code> (future values wait) and the server scheduler
+                        logs. A pending row is not an error.
+                    </p>
+                    <h3>PROVIDER_NOT_CONFIGURED</h3>
+                    <p>
+                        SMTP credentials are missing or the SMS gateway is not integrated. Add SMTP settings to
+                        <code class="inline">local-secrets.properties</code> and restart the backend, then send a new
+                        notification.
+                    </p>
+                    <h3>Dashboard is empty</h3>
+                    <p>
+                        Metrics are scoped to the signed-in account. If you sent notifications with a different
+                        account's key, they will not appear here. Start with
+                        <a href="docs.html#create-a-notification">Try it</a>.
+                    </p>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+</html>
