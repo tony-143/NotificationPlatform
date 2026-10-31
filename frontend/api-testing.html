@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Testing · Notification Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/playground.css">
+</head>
+<body class="portal pg-page" data-page="api-testing">
+    <div id="pageLoading" class="page-loading">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Checking your session…</p>
+    </div>
+
+    <main class="app-main">
+        <div class="page-head pg-head">
+            <div>
+                <span class="eyebrow">Playground</span>
+                <h1>API Testing</h1>
+                <p>Test your notification API endpoints directly from your developer workspace.</p>
+            </div>
+            <div class="spacer"></div>
+            <div class="page-head-actions">
+                <span class="live-pill"><span class="dot" aria-hidden="true"></span>Make real API requests using your API key.</span>
+                <a class="btn btn-ghost" href="docs.html#create-a-notification">API reference</a>
+            </div>
+        </div>
+
+        <form id="pgForm" class="pg-stack" novalidate autocomplete="off">
+            <!-- ============ 1. Request configuration ============ -->
+            <section class="panel" id="requestPanel" aria-labelledby="requestTitle">
+                <div class="panel-head">
+                    <h2 id="requestTitle">Request configuration</h2>
+                    <span class="spacer"></span>
+                    <span class="chart-hint">Requests go straight to the API from this browser</span>
+                </div>
+                <div class="panel-body">
+                    <div class="field">
+                        <label for="urlPreview">Request URL</label>
+                        <div class="pg-urlbar">
+                            <select class="method-select" id="methodSelect" aria-label="HTTP method">
+                                <option value="POST" selected>POST</option>
+                                <option value="GET">GET</option>
+                            </select>
+                            <input class="input mono" id="urlPreview" readonly
+                                   aria-label="Full request URL" value="">
+                            <button class="btn btn-secondary" type="button" id="copyUrlBtn">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="pg-grid-2">
+                        <div class="field">
+                            <label for="baseUrlInput">API base URL</label>
+                            <input class="input mono" id="baseUrlInput" spellcheck="false"
+                                   placeholder="http://localhost:8081">
+                            <span class="hint">Change this to point the playground at another environment.</span>
+                        </div>
+                        <div class="field">
+                            <label for="pathInput">Endpoint</label>
+                            <input class="input mono" id="pathInput" spellcheck="false"
+                                   placeholder="/api/v1/notifications">
+                            <span class="hint">Append a notification id to fetch a single record with GET.</span>
+                        </div>
+                    </div>
+
+                    <div class="pg-grid-key">
+                        <div class="field">
+                            <div class="label-row">
+                                <label for="apiKeyInput">API key</label>
+                                <span class="tip" tabindex="0" role="note"
+                                      aria-label="Keys are held in memory for this tab only. They are never written to storage, cookies or logs."
+                                      data-tip="Held in memory for this tab only. Never written to browser storage, cookies or logs.">i</span>
+                            </div>
+                            <div class="key-input">
+                                <input class="input" id="apiKeyInput" type="password" spellcheck="false"
+                                       autocomplete="off" data-lpignore="true" placeholder="np_…"
+                                       aria-describedby="keyHint">
+                                <button class="key-toggle" type="button" id="toggleKeyBtn"
+                                        aria-pressed="false">Show</button>
+                            </div>
+                            <span class="hint" id="keyHint">
+                                Paste the secret from
+                                <a href="api-keys.html">API Keys</a>. It is kept in memory and cleared when you leave the page.
+                            </span>
+                        </div>
+                        <div class="field">
+                            <label for="savedKeySelect">Saved credential</label>
+                            <select class="select" id="savedKeySelect">
+                                <option value="">Paste a key manually</option>
+                            </select>
+                            <span class="hint" id="savedKeyHint">Secrets cannot be retrieved after creation.</span>
+                        </div>
+                    </div>
+
+                    <div class="auth-block">
+                        <div class="auth-line">
+                            <code><span class="tok">X-API-Key</span>: YOUR_API_KEY</code>
+                            <span class="spacer"></span>
+                            <button class="btn btn-ghost btn-sm" type="button" id="copyHeaderBtn">Copy header</button>
+                        </div>
+                        <p class="auth-note">
+                            This API authenticates with <code class="inline">X-API-Key</code>.
+                            <code class="inline">Authorization: Bearer YOUR_API_KEY</code> is accepted by CORS but ignored by
+                            the authentication filter, so a Bearer-only request returns <code class="inline">401</code>.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 2. Notification configuration ============ -->
+            <section class="panel" id="notificationPanel" aria-labelledby="notificationTitle">
+                <div class="panel-head">
+                    <h2 id="notificationTitle">Notification configuration</h2>
+                    <span class="spacer"></span>
+                    <button class="btn btn-ghost btn-sm" type="button" id="clearFormBtn">Clear form</button>
+                </div>
+                <div class="panel-body">
+                    <div class="portal-alert info" id="methodNotice" hidden>
+                        A <strong>GET</strong> request returns notification history and does not send a body, so the
+                        fields below are disabled. Switch the method to <strong>POST</strong> to compose a notification.
+                    </div>
+
+                    <fieldset class="channel-set">
+                        <legend>Notification channel</legend>
+                        <div class="channel-grid">
+                            <label class="channel-card">
+                                <input type="radio" name="channel" value="EMAIL" checked>
+                                <span class="channel-icon" aria-hidden="true">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+                                        <path d="M3.5 7.5l8.5 5.5 8.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
+                                <span class="channel-text">
+                                    <span class="channel-title">EMAIL</span>
+                                    <span class="channel-sub">Delivered through the configured SMTP server</span>
+                                </span>
+                                <span class="channel-radio" aria-hidden="true"></span>
+                            </label>
+                            <label class="channel-card">
+                                <input type="radio" name="channel" value="SMS">
+                                <span class="channel-icon" aria-hidden="true">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                                        <rect x="6" y="2.5" width="12" height="19" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+                                        <path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
+                                <span class="channel-text">
+                                    <span class="channel-title">SMS</span>
+                                    <span class="channel-sub">Accepted and stored; no SMS gateway is configured</span>
+                                </span>
+                                <span class="channel-radio" aria-hidden="true"></span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="pg-grid-2" id="emailFields">
+                        <div class="field">
+                            <label for="recipientEmail">Recipient email address</label>
+                            <input class="input" id="recipientEmail" type="email" inputmode="email"
+                                   placeholder="customer@example.com" spellcheck="false">
+                            <span class="hint">Stored as the notification recipient.</span>
+                        </div>
+                        <div class="field">
+                            <div class="label-row">
+                                <label for="subjectInput">Subject</label>
+                                <span class="tip" tabindex="0" role="note"
+                                      aria-label="The create endpoint has no subject field. The value is added to the payload object. The email channel currently sends a fixed subject line."
+                                      data-tip="The create endpoint has no subject field. The value is added to the payload object. The email channel currently sends a fixed subject line.">i</span>
+                            </div>
+                            <input class="input" id="subjectInput" placeholder="Order confirmation">
+                            <span class="hint">Added to <code class="inline">payload.subject</code>; the email channel still sends a fixed subject.</span>
+                        </div>
+                    </div>
+
+                    <div class="pg-grid-2" id="smsFields" hidden>
+                        <div class="field">
+                            <label for="recipientPhone">Recipient phone number</label>
+                            <input class="input" id="recipientPhone" type="tel" inputmode="tel"
+                                   placeholder="+919876543210" spellcheck="false">
+                            <span class="hint">Include the country code. The backend validates length only.</span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="messageInput">Message body</label>
+                        <textarea class="textarea" id="messageInput" rows="4" maxlength="10000"
+                                  placeholder="Your order has been confirmed…"></textarea>
+                        <div class="field-foot">
+                            <span class="hint">Plain text, up to 10,000 characters.</span>
+                            <span class="char-count" id="messageCount">0 / 10000</span>
+                        </div>
+                    </div>
+
+                    <!-- Advanced options -->
+                    <div class="pg-advanced" id="advancedSection">
+                        <button class="adv-toggle" type="button" id="advancedToggle"
+                                aria-expanded="false" aria-controls="advancedBody">
+                            <span class="chev" aria-hidden="true">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            Advanced options
+                            <span class="adv-summary" id="advancedSummary"></span>
+                        </button>
+
+                        <div class="adv-body" id="advancedBody" hidden>
+                            <div class="field">
+                                <div class="label-row">
+                                    <label for="idempotencyInput">Idempotency key</label>
+                                    <span class="tip" tabindex="0" role="note"
+                                          aria-label="The server hashes this key with the request body and remembers the pair for five minutes. Replaying the same key and body returns the original notification instead of creating a new one."
+                                          data-tip="Remembered for 5 minutes with the request body. Same key + same body returns the original notification; a different body returns 409.">i</span>
+                                </div>
+                                <div class="inline-controls">
+                                    <input class="input mono" id="idempotencyInput" maxlength="200"
+                                           placeholder="order-1042-email" spellcheck="false">
+                                    <button class="btn btn-secondary" type="button" id="generateIdemBtn">Generate</button>
+                                </div>
+                                <span class="hint">Required. Reuse it when retrying the same logical request.</span>
+                            </div>
+
+                            <div class="switch-row">
+                                <div>
+                                    <div class="switch-label">
+                                        Scheduled delivery
+                                        <span class="tip" tabindex="0" role="note"
+                                              aria-label="The scheduler only picks up notifications whose scheduled time has passed. Times in the past are rejected."
+                                              data-tip="The worker only processes the notification once this time has passed. Past times are rejected.">i</span>
+                                    </div>
+                                    <span class="hint">Hold the notification until a future date and time.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="scheduleToggle">
+                                    <span class="switch-track" aria-hidden="true"></span>
+                                    <span class="sr-only">Enable scheduled delivery</span>
+                                </label>
+                            </div>
+
+                            <div class="field" id="scheduleField" hidden>
+                                <label for="scheduleAt">Scheduled date and time</label>
+                                <input class="input" id="scheduleAt" type="datetime-local">
+                                <span class="hint">Interpreted in your local timezone and sent as an ISO-8601 instant.</span>
+                            </div>
+
+                            <div class="field">
+                                <div class="label-row">
+                                    <label for="payloadInput">JSON payload (optional)</label>
+                                    <span class="json-status" id="payloadStatus"></span>
+                                </div>
+                                <textarea class="textarea" id="payloadInput" rows="5" spellcheck="false"
+                                          placeholder='{"orderId": 1042}'></textarea>
+                                <span class="hint">
+                                    Sent as the <code class="inline">payload</code> string field — not as a nested request
+                                    object. Must be valid JSON.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="portal-alert error" id="formAlert" role="alert" hidden></div>
+
+                    <div class="pg-send">
+                        <button class="btn btn-gradient" type="submit" id="sendBtn">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M21 3L10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3z" stroke="currentColor"
+                                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span id="sendBtnLabel">Send API Request</span>
+                        </button>
+                        <span class="send-note" id="sendNote"></span>
+                    </div>
+                </div>
+            </section>
+        </form>
+
+        <!-- ============ 3. Response ============ -->
+        <section class="panel" id="responsePanel" aria-labelledby="responseTitle">
+            <div class="panel-head">
+                <h2 id="responseTitle">Response</h2>
+                <span class="spacer"></span>
+                <div class="resp-meta" id="respMeta" hidden>
+                    <span class="status-pill" id="respStatus"></span>
+                    <span class="resp-chip" id="respDuration"></span>
+                    <span class="resp-chip" id="respTime"></span>
+                </div>
+                <button class="btn btn-ghost btn-sm" type="button" id="copyResponseBtn" disabled>Copy response</button>
+            </div>
+            <div class="panel-body" id="responseBody">
+                <div class="empty">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 17V7a2 2 0 012-2h9l5 5v7a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M14 5v5h5M8.5 13.5l2 2 4-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <h3>No request sent yet</h3>
+                    <p>Formatted JSON response appears here after submission. Configure a request above and press
+                        <strong>Send API Request</strong>.</p>
+                </div>
+            </div>
+        </section>
+        <p class="sr-only" id="responseLive" role="status" aria-live="polite"></p>
+
+        <!-- ============ 4. Request history ============ -->
+        <section class="panel" aria-labelledby="historyTitle">
+            <div class="panel-head">
+                <h2 id="historyTitle">Request history</h2>
+                <span class="spacer"></span>
+                <span class="chart-hint" id="historySummary">No requests yet</span>
+                <button class="btn btn-ghost btn-sm" type="button" id="clearHistoryBtn" disabled>Clear history</button>
+            </div>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th scope="col">Method</th>
+                            <th scope="col">Endpoint</th>
+                            <th scope="col">Channel</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Executed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr class="empty-row">
+                            <td colspan="5">
+                                <div class="empty">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.4"/>
+                                        <path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                                    </svg>
+                                    <h3>No requests in this session</h3>
+                                    <p>Every request you send appears here. Selecting a row restores its configuration
+                                        and response — API keys are never stored, so you will re-enter the secret.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="panel-note">
+                History is kept in this tab's memory only and disappears on reload. API keys and message content are
+                never written to browser storage.
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/api-testing.js"></script>
+</body>
+</html>

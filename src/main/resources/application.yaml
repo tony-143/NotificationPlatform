@@ -30,7 +30,7 @@ server:
 app:
   jwt:
     secret: cFyKTX58ilglvPd3+VBwFV3lhEnZOiVKc6ML8j2SPK4=
-    expiration-ms: 900000
+    expiration-ms: 86400000
     cookie-secure: ${APP_AUTH_COOKIE_SECURE:false}
   notifications:
     poll-interval-ms: 60000

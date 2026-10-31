@@ -5,7 +5,8 @@
 const NAV_ITEMS = [
     { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html' },
     { id: 'api-keys', label: 'API Keys', href: 'api-keys.html' },
-    { id: 'docs', label: 'Documentation', href: 'docs.html' }
+    { id: 'docs', label: 'Documentation', href: 'docs.html' },
+    { id: 'api-testing', label: 'API Testing', href: 'api-testing.html' }
 ];
 
 function currentUser() {
